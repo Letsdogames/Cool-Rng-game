@@ -1,3 +1,4 @@
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -520,6 +521,8 @@
                 width: 25px;
             }
             #your-cards {
+
+
                 width: 45%;
             }
             #roll-button, #multi-roll {
@@ -1308,6 +1311,16 @@
         document.getElementById('missions-back-button').addEventListener('click', () => {
             const missionsMenu = document.getElementById('missions-menu');
             missionsMenu.classList.remove('open');
+        });
+
+        // Event listener for roll button
+        document.getElementById('roll-button').addEventListener('click', () => {
+            performSingleRoll();
+        });
+
+        // Event listener for multi-roll button
+        document.getElementById('multi-roll').addEventListener('click', () => {
+            performMultiRoll();
         });
 
         // Initialize game state
