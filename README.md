@@ -81,6 +81,10 @@
             50% { background-color: #e0e0e0; }
             100% { background-color: #d3d3d3; }
         }
+        @keyframes slide-up {
+            0% { transform: translateY(100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
         #grey-box .name-container {
             position: absolute;
             transition: transform 0.1s linear;
@@ -123,6 +127,10 @@
         #roll-button:hover {
             background-color: #45a049;
         }
+        #roll-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         #multi-roll {
             padding: 10px 40px;
             font-size: 18px;
@@ -136,6 +144,10 @@
         }
         #multi-roll:hover {
             background-color: #1e87e5;
+        }
+        #multi-roll:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
         #main-gold-balance {
             font-size: 18px;
@@ -381,6 +393,9 @@
             font-size: 14px;
             color: #555;
         }
+        .achievement-item.claimed h3, .achievement-item.claimed p {
+            color: #4CAF50;
+        }
         .claim-button {
             padding: 8px 16px;
             font-size: 14px;
@@ -397,6 +412,58 @@
         .claim-button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
+        }
+        .tutorial-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .tutorial-overlay.active {
+            display: flex;
+        }
+        .tutorial-content {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .tutorial-content h3 {
+            margin: 0 0 10px;
+            font-size: 20px;
+            color: #333;
+        }
+        .tutorial-content p {
+            margin: 0 0 15px;
+            font-size: 16px;
+            color: #555;
+        }
+        .tutorial-content button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            background-color: #4CAF50;
+            transition: background-color 0.3s ease;
+        }
+        .tutorial-content button:hover {
+            background-color: #45a049;
+        }
+        .highlight {
+            position: relative;
+            z-index: 2100;
+            box-shadow: 0 0 10px 5px rgba(255, 255, 0, 0.5);
+            background-color: rgba(255, 255, 0, 0.1);
         }
         @media screen and (max-width: 600px) {
             .top-buttons {
@@ -490,6 +557,20 @@
                 padding: 2vw 4vw;
                 font-size: min(4vw, 12px);
             }
+            .tutorial-content {
+                width: 90%;
+                padding: 3vw;
+            }
+            .tutorial-content h3 {
+                font-size: min(6vw, 18px);
+            }
+            .tutorial-content p {
+                font-size: min(5vw, 14px);
+            }
+            .tutorial-content button {
+                padding: 2vw 4vw;
+                font-size: min(4vw, 14px);
+            }
         }
         @media screen and (min-width: 601px) and (max-width: 900px) {
             .top-buttons {
@@ -521,8 +602,6 @@
                 width: 25px;
             }
             #your-cards {
-
-
                 width: 45%;
             }
             #roll-button, #multi-roll {
@@ -586,6 +665,20 @@
                 padding: 1.5vw 3vw;
                 font-size: min(3.5vw, 13px);
             }
+            .tutorial-content {
+                width: 80%;
+                padding: 2vw;
+            }
+            .tutorial-content h3 {
+                font-size: min(5vw, 20px);
+            }
+            .tutorial-content p {
+                font-size: min(4vw, 16px);
+            }
+            .tutorial-content button {
+                padding: 1.5vw 3vw;
+                font-size: min(4vw, 14px);
+            }
         }
     </style>
 </head>
@@ -597,8 +690,8 @@
     <div class="main-container">
         <div class="roll-section">
             <div id="grey-box"><div class="name-container">Click Roll to Start</div></div>
-            <button id="roll-button">Roll</button>
-            <button id="multi-roll">10x Roll</button>
+            <button id="roll-button">Roll (100 Gold)</button>
+            <button id="multi-roll">10x Roll (900 Gold)</button>
             <div id="main-gold-balance">Gold: 1000</div>
         </div>
         <div id="your-cards">
@@ -632,6 +725,13 @@
             </div>
             <div id="achievements"></div>
             <div id="daily-missions"></div>
+        </div>
+    </div>
+    <div class="tutorial-overlay" id="tutorial-overlay">
+        <div class="tutorial-content">
+            <h3 id="tutorial-title">Welcome!</h3>
+            <p id="tutorial-text">Let's learn how to play the game.</p>
+            <button id="tutorial-next">Next</button>
         </div>
     </div>
 
@@ -695,6 +795,8 @@
         let multiRollCount = parseInt(localStorage.getItem('multiRollCount')) || 0;
         let unviewedCount = parseInt(localStorage.getItem('unviewedCount')) || 0;
         let rollsSinceLegendary = parseInt(localStorage.getItem('rollsSinceLegendary')) || 0;
+        let sellCount = parseInt(localStorage.getItem('sellCount')) || 0; // Track number of cards sold
+        let goldEarned = parseInt(localStorage.getItem('goldEarned')) || 0; // Track total gold earned
         const pityThreshold = 100;
         let currentFilter = localStorage.getItem('currentFilter') || 'all';
         let dailyGoldEarned = parseInt(localStorage.getItem('dailyGoldEarned')) || 0;
@@ -708,6 +810,7 @@
             localStorage.removeItem('dailyMissions');
         }
         let lastMissionReset = parseInt(localStorage.getItem('lastMissionReset')) || Date.now();
+        let tutorialCompleted = localStorage.getItem('tutorialCompleted') === 'true';
 
         // Achievements
         const achievements = [
@@ -715,7 +818,12 @@
             { id: 'rolls50', name: 'Roll 50 Times', condition: () => rollCount >= 50, reward: 500, claimed: false },
             { id: 'rolls100', name: 'Roll 100 Times', condition: () => rollCount >= 100, reward: 2000, claimed: false },
             { id: 'allCommon', name: 'Collect All Common', condition: () => Object.keys(characterCounts['Common'] || {}).length === characters['Common'].length, reward: 500, claimed: false },
-            { id: 'allRare', name: 'Collect All Rare', condition: () => Object.keys(characterCounts['Rare'] || {}).length === characters['Rare'].length, reward: 2000, claimed: false }
+            { id: 'allRare', name: 'Collect All Rare', condition: () => Object.keys(characterCounts['Rare'] || {}).length === characters['Rare'].length, reward: 2000, claimed: false },
+            { id: 'allEpic', name: 'Collect All Epic', condition: () => Object.keys(characterCounts['Epic'] || {}).length === characters['Epic'].length, reward: 5000, claimed: false },
+            { id: 'getLegendary', name: 'Obtain a Legendary', condition: () => Object.keys(characterCounts['Legendary'] || {}).length >= 1, reward: 3000, claimed: false },
+            { id: 'multiRoll10', name: 'Perform 10 Multi-Rolls', condition: () => multiRollCount >= 10, reward: 1500, claimed: false },
+            { id: 'sell10', name: 'Sell 10 Cards', condition: () => sellCount >= 10, reward: 1000, claimed: false },
+            { id: 'gold5000', name: 'Earn 5000 Gold', condition: () => goldEarned >= 5000, reward: 2000, claimed: false }
         ];
 
         // Load and merge saved achievements
@@ -741,6 +849,79 @@
             { id: 'getEpic', name: 'Obtain 1 Epic Character', progress: 0, goal: 1, reward: 400, type: 'getEpic' }
         ];
 
+        // Tutorial Steps
+        const tutorialSteps = [
+            {
+                title: "Welcome to the Gacha Game!",
+                text: "This game lets you collect characters by rolling with gold. Let's explore the main features!",
+                highlight: null
+            },
+            {
+                title: "Rolling for Characters",
+                text: "Click the 'Roll (100 Gold)' button to get a random character, or '10x Roll (900 Gold)' for ten at once. Try it after the tutorial!",
+                highlight: "#roll-button, #multi-roll"
+            },
+            {
+                title: "Your Gold Balance",
+                text: "Your gold is shown here. You earn 10 gold every 5 minutes (up to 200 daily) and more through missions!",
+                highlight: "#main-gold-balance"
+            },
+            {
+                title: "Your Card Collection",
+                text: "Click 'Your Cards' to view your characters. You can filter by rarity and sell duplicates for gold.",
+                highlight: "#your-cards h2"
+            },
+            {
+                title: "Shop",
+                text: "Click 'Shop' to buy specific characters with gold. Rarer characters cost more!",
+                highlight: "#top-shop-button"
+            },
+            {
+                title: "Missions & Achievements",
+                text: "Click 'Missions' to view daily missions and achievements. Complete them to earn more gold!",
+                highlight: "#top-missions-button"
+            },
+            {
+                title: "You're Ready!",
+                text: "That's all you need to know! Start by rolling for a character or checking missions. Have fun!",
+                highlight: null
+            }
+        ];
+
+        // Tutorial Management
+        let currentTutorialStep = 0;
+
+        function startTutorial() {
+            if (tutorialCompleted) return;
+            const overlay = document.getElementById('tutorial-overlay');
+            overlay.classList.add('active');
+            updateTutorialStep();
+        }
+
+        function updateTutorialStep() {
+            const title = document.getElementById('tutorial-title');
+            const text = document.getElementById('tutorial-text');
+            const nextButton = document.getElementById('tutorial-next');
+            
+            // Remove previous highlights
+            document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+
+            if (currentTutorialStep < tutorialSteps.length) {
+                const step = tutorialSteps[currentTutorialStep];
+                title.textContent = step.title;
+                text.textContent = step.text;
+                nextButton.textContent = currentTutorialStep === tutorialSteps.length - 1 ? 'Finish' : 'Next';
+
+                if (step.highlight) {
+                    document.querySelectorAll(step.highlight).forEach(el => el.classList.add('highlight'));
+                }
+            } else {
+                document.getElementById('tutorial-overlay').classList.remove('active');
+                tutorialCompleted = true;
+                localStorage.setItem('tutorialCompleted', 'true');
+            }
+        }
+
         // Function to generate 3 random missions
         function generateDailyMissions() {
             const availableTemplates = [...missionTemplates];
@@ -763,6 +944,8 @@
             localStorage.setItem('multiRollCount', multiRollCount);
             localStorage.setItem('unviewedCount', unviewedCount);
             localStorage.setItem('rollsSinceLegendary', rollsSinceLegendary);
+            localStorage.setItem('sellCount', sellCount);
+            localStorage.setItem('goldEarned', goldEarned);
             localStorage.setItem('currentFilter', currentFilter);
             localStorage.setItem('dailyGoldEarned', dailyGoldEarned);
             localStorage.setItem('lastGoldReset', lastGoldReset);
@@ -774,9 +957,9 @@
         // Function to check and reset daily missions and gold cap
         function checkDailyReset() {
             const now = Date.now();
-            const today = new Date(now).toUTCString().split(' ')[1] + ' ' + new Date(now).toUTCString().split(' ')[2];
-            const lastReset = new Date(lastMissionReset).toUTCString().split(' ')[1] + ' ' + new Date(lastMissionReset).toUTCString().split(' ')[2];
-            if (today !== lastReset) {
+            const today = new Date(now).setHours(0, 0, 0, 0);
+            const lastReset = new Date(lastMissionReset).setHours(0, 0, 0, 0);
+            if (today > lastReset) {
                 generateDailyMissions();
                 dailyGoldEarned = 0;
                 lastGoldReset = now;
@@ -798,7 +981,6 @@
                 dailyMissions[missionIndex] = newMission;
             }
 
-            // Ensure exactly 3 missions if possible
             while (dailyMissions.length < 3 && availableTemplates.length > 0) {
                 const remainingTemplates = missionTemplates.filter(mt => !dailyMissions.some(dm => dm.id === mt.id));
                 if (remainingTemplates.length === 0) break;
@@ -816,6 +998,8 @@
             document.getElementById('main-gold-balance').textContent = `Gold: ${goldBalance}`;
             document.getElementById('gold-balance').textContent = `Gold: ${goldBalance}`;
             document.getElementById('missions-gold-balance').textContent = `Gold: ${goldBalance}`;
+            document.getElementById('roll-button').disabled = goldBalance < 100;
+            document.getElementById('multi-roll').disabled = goldBalance < 900;
             if (document.getElementById('shop-menu').classList.contains('open')) {
                 renderShopCharacters();
             }
@@ -843,7 +1027,9 @@
                 const goldToAdd = Math.min(10, dailyGoldCap - dailyGoldEarned);
                 goldBalance += goldToAdd;
                 dailyGoldEarned += goldToAdd;
+                goldEarned += goldToAdd; // Track for achievement
                 updateGoldBalance();
+                renderMissions(); // Update achievements display
             }
         }, 5 * 60 * 1000);
 
@@ -898,9 +1084,13 @@
 
         // Function to perform a single roll
         function performSingleRoll() {
+            if (goldBalance < 100) {
+                alert('Not enough gold for a single roll!');
+                return;
+            }
+            goldBalance -= 100;
             rollCount++;
             rollsSinceLegendary++;
-            goldBalance += 50;
             updateGoldBalance();
             updateMissionProgress('singleRoll');
             const greyBox = document.getElementById('grey-box');
@@ -917,6 +1107,7 @@
                 if (rarity.name === 'Epic') {
                     updateMissionProgress('getEpic');
                 }
+                renderMissions(); // Update achievements display
             }, 5000);
             setTimeout(() => {
                 const nameContainer = document.getElementById('grey-box').querySelector('.name-container');
@@ -951,16 +1142,22 @@
 
         // Function to perform multi-roll (10x)
         async function performMultiRoll() {
+            if (goldBalance < 900) {
+                alert('Not enough gold for a 10x roll!');
+                return;
+            }
+            goldBalance -= 900;
             multiRollCount++;
             rollCount += 10;
             rollsSinceLegendary += 10;
-            goldBalance += 500;
             if (Math.random() < 0.05) {
                 goldBalance += 2000;
+                goldEarned += 2000; // Track for achievement
                 alert('Jackpot! Earned 2000 extra gold!');
             }
             if (multiRollCount % 5 === 0) {
                 goldBalance += 1000;
+                goldEarned += 1000; // Track for achievement
                 alert('5th Multi-Roll Bonus: Earned 1000 extra gold!');
             }
             updateGoldBalance();
@@ -984,6 +1181,7 @@
                     if (r.name === 'Epic') {
                         updateMissionProgress('getEpic');
                     }
+                    renderMissions(); // Update achievements display
                 }, 2000, rarity, character);
             }
             displayMultiRollSummary(results);
@@ -1022,7 +1220,7 @@
                     } else {
                         const finalRarity = fixedRarity || getRandomRarity();
                         const finalCharacter = fixedCharacter || getRandomCharacter(finalRarity.name);
-                        nameContainer.innerHTML = `You got! ${finalRarity.name}:${finalCharacter.name}`;
+                        nameContainer.innerHTML = `You got! ${finalRarity.name}: ${finalCharacter.name}`;
                         nameContainer.style.color = finalRarity.class === 'rarity-common' ? 'gray' :
                                                    finalRarity.class === 'rarity-rare' ? 'blue' :
                                                    finalRarity.class === 'rarity-epic' ? 'purple' : 'gold';
@@ -1068,11 +1266,9 @@
             // Add event listeners to sell buttons
             const sellButtons = cardsContainer.querySelectorAll('.sell-button');
             sellButtons.forEach(button => {
-                button.replaceWith(button.cloneNode(true));
-                const newButton = cardsContainer.querySelector(`.sell-button[data-rarity="${button.getAttribute('data-rarity')}"][data-character="${button.getAttribute('data-character')}"]`);
-                newButton.addEventListener('click', () => {
-                    const rarityName = newButton.getAttribute('data-rarity');
-                    const characterName = newButton.getAttribute('data-character');
+                button.addEventListener('click', () => {
+                    const rarityName = button.getAttribute('data-rarity');
+                    const characterName = button.getAttribute('data-character');
                     const rarity = rarities.find(r => r.name === rarityName);
                     if (characterCounts[rarityName][characterName] > 1) {
                         characterCounts[rarityName][characterName]--;
@@ -1083,6 +1279,8 @@
                             }
                         }
                         goldBalance += rarity.sellValue;
+                        goldEarned += rarity.sellValue; // Track for achievement
+                        sellCount++; // Track for achievement
                         alert(`Sold ${rarityName}: ${characterName} for ${rarity.sellValue} Gold!`);
                         updateGoldBalance();
                         updateMissionProgress('sellDuplicate');
@@ -1130,7 +1328,7 @@
                             <h3 class="${rarity.class}">${rarity.name}: ${character.name}</h3>
                             <p>Chance to get: ${overallProbability}% | Cost: ${character.goldCost} Gold</p>
                         </div>
-                        <button class="buy-button" data-rarity="${rarity.name}" data-character="${character.name}" data-cost="${character.goldCost}">Buy</button>
+                        <button class="buy-button" data-rarity="${rarity.name}" data-character="${character.name}" data-cost="${character.goldCost}" ${goldBalance < character.goldCost ? 'disabled' : ''}>Buy</button>
                     `;
                     shopCharacters.appendChild(characterItem);
                 }
@@ -1139,12 +1337,10 @@
             // Add event listeners to buy buttons
             const buyButtons = shopCharacters.querySelectorAll('.buy-button');
             buyButtons.forEach(button => {
-                button.replaceWith(button.cloneNode(true));
-                const newButton = shopCharacters.querySelector(`.buy-button[data-rarity="${button.getAttribute('data-rarity')}"][data-character="${button.getAttribute('data-character')}"]`);
-                newButton.addEventListener('click', () => {
-                    const cost = parseInt(newButton.getAttribute('data-cost'));
-                    const rarityName = newButton.getAttribute('data-rarity');
-                    const characterName = newButton.getAttribute('data-character');
+                button.addEventListener('click', () => {
+                    const cost = parseInt(button.getAttribute('data-cost'));
+                    const rarityName = button.getAttribute('data-rarity');
+                    const characterName = button.getAttribute('data-character');
                     if (goldBalance >= cost) {
                         goldBalance -= cost;
                         updateGoldBalance();
@@ -1158,16 +1354,11 @@
                         if (rarityName === 'Epic') {
                             updateMissionProgress('getEpic');
                         }
+                        renderMissions(); // Update achievements display
                     } else {
                         alert('Not enough gold to purchase this character.');
                     }
                 });
-            });
-
-            // Update buy button states
-            buyButtons.forEach(button => {
-                const cost = parseInt(button.getAttribute('data-cost'));
-                button.disabled = goldBalance < cost;
             });
         }
 
@@ -1186,6 +1377,9 @@
                 achievementItem.classList.add('achievement-item');
                 if (isComplete && !ach.claimed) {
                     achievementItem.classList.add('completed');
+                }
+                if (ach.claimed) {
+                    achievementItem.classList.add('claimed');
                 }
                 achievementItem.innerHTML = `
                     <h3>${ach.name}</h3>
@@ -1225,39 +1419,37 @@
             // Add event listeners to claim buttons
             const claimButtons = document.querySelectorAll('.claim-button');
             claimButtons.forEach(button => {
-                button.replaceWith(button.cloneNode(true));
-                const newButton = document.querySelector(`.claim-button[data-achievement-id="${button.getAttribute('data-achievement-id') || ''}"][data-mission-id="${button.getAttribute('data-mission-id') || ''}"]`);
-                if (newButton) {
-                    newButton.addEventListener('click', () => {
-                        const achievementId = newButton.getAttribute('data-achievement-id');
-                        const missionId = newButton.getAttribute('data-mission-id');
-                        if (achievementId) {
-                            const ach = achievements.find(a => a.id === achievementId);
-                            if (ach && ach.condition() && !ach.claimed) {
-                                ach.claimed = true;
-                                goldBalance += ach.reward;
-                                alert(`Claimed ${ach.name} for ${ach.reward} Gold!`);
-                                updateGoldBalance();
-                                renderMissions();
-                                saveGameState();
-                            }
-                        } else if (missionId) {
-                            const mission = dailyMissions.find(m => m.id === missionId);
-                            if (mission && mission.progress >= mission.goal && !mission.claimedAt) {
-                                goldBalance += mission.reward;
-                                mission.claimedAt = Date.now();
-                                alert(`Claimed ${mission.name} for ${mission.reward} Gold! New mission in 2 hours.`);
-                                updateGoldBalance();
-                                renderMissions();
-                                saveGameState();
-                                setTimeout(() => {
-                                    replaceMission(missionId);
-                                    renderMissions();
-                                }, 2 * 60 * 60 * 1000);
-                            }
+                button.addEventListener('click', () => {
+                    const achievementId = button.getAttribute('data-achievement-id');
+                    const missionId = button.getAttribute('data-mission-id');
+                    if (achievementId) {
+                        const ach = achievements.find(a => a.id === achievementId);
+                        if (ach && ach.condition() && !ach.claimed) {
+                            ach.claimed = true;
+                            goldBalance += ach.reward;
+                            goldEarned += ach.reward; // Track for achievement
+                            alert(`Claimed ${ach.name} for ${ach.reward} Gold!`);
+                            updateGoldBalance();
+                            renderMissions();
+                            saveGameState();
                         }
-                    });
-                }
+                    } else if (missionId) {
+                        const mission = dailyMissions.find(m => m.id === missionId);
+                        if (mission && mission.progress >= mission.goal && !mission.claimedAt) {
+                            goldBalance += mission.reward;
+                            goldEarned += mission.reward; // Track for achievement
+                            mission.claimedAt = Date.now();
+                            alert(`Claimed ${mission.name} for ${mission.reward} Gold! New mission in 2 hours.`);
+                            updateGoldBalance();
+                            renderMissions();
+                            saveGameState();
+                            setTimeout(() => {
+                                replaceMission(missionId);
+                                renderMissions();
+                            }, 2 * 60 * 60 * 1000);
+                        }
+                    }
+                });
             });
         }
 
@@ -1288,6 +1480,7 @@
 
         // Event listener for shop button
         document.getElementById('top-shop-button').addEventListener('click', () => {
+            if (!tutorialCompleted) return; // Prevent interaction during tutorial
             const shopMenu = document.getElementById('shop-menu');
             shopMenu.classList.add('open');
             renderShopCharacters();
@@ -1302,6 +1495,7 @@
 
         // Event listener for missions button
         document.getElementById('top-missions-button').addEventListener('click', () => {
+            if (!tutorialCompleted) return; // Prevent interaction during tutorial
             const missionsMenu = document.getElementById('missions-menu');
             missionsMenu.classList.add('open');
             renderMissions();
@@ -1315,12 +1509,20 @@
 
         // Event listener for roll button
         document.getElementById('roll-button').addEventListener('click', () => {
+            if (!tutorialCompleted) return; // Prevent interaction during tutorial
             performSingleRoll();
         });
 
         // Event listener for multi-roll button
         document.getElementById('multi-roll').addEventListener('click', () => {
+            if (!tutorialCompleted) return; // Prevent interaction during tutorial
             performMultiRoll();
+        });
+
+        // Event listener for tutorial next button
+        document.getElementById('tutorial-next').addEventListener('click', () => {
+            currentTutorialStep++;
+            updateTutorialStep();
         });
 
         // Initialize game state
@@ -1343,6 +1545,7 @@
         updateNotificationDot();
         renderCards();
         renderMissions();
+        startTutorial();
     </script>
 </body>
 </html>
