@@ -212,10 +212,15 @@
         .rarity-rare { color: blue; border-color: blue; }
         .rarity-epic { color: purple; border-color: purple; }
         .rarity-legendary { color: gold; border-color: gold; font-weight: bold; }
-        .sell-button {
+        .sell-controls {
             position: absolute;
             top: 10px;
             right: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .sell-button {
             padding: 5px 10px;
             font-size: 12px;
             cursor: pointer;
@@ -227,6 +232,28 @@
         }
         .sell-button:hover {
             background-color: #c0392b;
+        }
+        .quantity-button {
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            background-color: #666;
+            transition: background-color 0.3s ease;
+        }
+        .quantity-button:hover {
+            background-color: #555;
+        }
+        .quantity-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .quantity-display {
+            font-size: 12px;
+            width: 30px;
+            text-align: center;
         }
         .filter-buttons {
             display: none;
@@ -518,9 +545,16 @@
                 padding: 2vw;
                 margin: 2vw 0;
             }
-            .sell-button {
+            .sell-controls {
+                gap: 3px;
+            }
+            .sell-button, .quantity-button {
                 padding: 1vw 2vw;
                 font-size: min(3vw, 10px);
+            }
+            .quantity-display {
+                font-size: min(3vw, 10px);
+                width: 20px;
             }
             .filter-button {
                 padding: 1vw 2vw;
@@ -626,9 +660,16 @@
                 padding: 1.5vw;
                 margin: 1.5vw 0;
             }
-            .sell-button {
+            .sell-controls {
+                gap: 4px;
+            }
+            .sell-button, .quantity-button {
                 padding: 1vw 2vw;
                 font-size: min(3.5vw, 11px);
+            }
+            .quantity-display {
+                font-size: min(3.5vw, 11px);
+                width: 25px;
             }
             .filter-button {
                 padding: 1vw 2vw;
@@ -795,8 +836,8 @@
         let multiRollCount = parseInt(localStorage.getItem('multiRollCount')) || 0;
         let unviewedCount = parseInt(localStorage.getItem('unviewedCount')) || 0;
         let rollsSinceLegendary = parseInt(localStorage.getItem('rollsSinceLegendary')) || 0;
-        let sellCount = parseInt(localStorage.getItem('sellCount')) || 0; // Track number of cards sold
-        let goldEarned = parseInt(localStorage.getItem('goldEarned')) || 0; // Track total gold earned
+        let sellCount = parseInt(localStorage.getItem('sellCount')) || 0;
+        let goldEarned = parseInt(localStorage.getItem('goldEarned')) || 0;
         const pityThreshold = 100;
         let currentFilter = localStorage.getItem('currentFilter') || 'all';
         let dailyGoldEarned = parseInt(localStorage.getItem('dailyGoldEarned')) || 0;
@@ -1027,9 +1068,9 @@
                 const goldToAdd = Math.min(10, dailyGoldCap - dailyGoldEarned);
                 goldBalance += goldToAdd;
                 dailyGoldEarned += goldToAdd;
-                goldEarned += goldToAdd; // Track for achievement
+                goldEarned += goldToAdd;
                 updateGoldBalance();
-                renderMissions(); // Update achievements display
+                renderMissions();
             }
         }, 5 * 60 * 1000);
 
@@ -1107,7 +1148,7 @@
                 if (rarity.name === 'Epic') {
                     updateMissionProgress('getEpic');
                 }
-                renderMissions(); // Update achievements display
+                renderMissions();
             }, 5000);
             setTimeout(() => {
                 const nameContainer = document.getElementById('grey-box').querySelector('.name-container');
@@ -1152,12 +1193,12 @@
             rollsSinceLegendary += 10;
             if (Math.random() < 0.05) {
                 goldBalance += 2000;
-                goldEarned += 2000; // Track for achievement
+                goldEarned += 2000;
                 alert('Jackpot! Earned 2000 extra gold!');
             }
             if (multiRollCount % 5 === 0) {
                 goldBalance += 1000;
-                goldEarned += 1000; // Track for achievement
+                goldEarned += 1000;
                 alert('5th Multi-Roll Bonus: Earned 1000 extra gold!');
             }
             updateGoldBalance();
@@ -1181,7 +1222,7 @@
                     if (r.name === 'Epic') {
                         updateMissionProgress('getEpic');
                     }
-                    renderMissions(); // Update achievements display
+                    renderMissions();
                 }, 2000, rarity, character);
             }
             displayMultiRollSummary(results);
@@ -1241,6 +1282,8 @@
             const cardsContainer = document.getElementById('cards-container');
             cardsContainer.innerHTML = '';
 
+            const sellQuantities = {};
+
             for (let rarityName in characterCounts) {
                 if (currentFilter !== 'all' && currentFilter !== rarityName) {
                     continue;
@@ -1249,41 +1292,95 @@
                 for (let charName in characterCounts[rarityName]) {
                     const character = characters[rarityName].find(c => c.name === charName);
                     const key = `${rarityName}:${charName}`;
+                    const count = characterCounts[rarityName][charName];
+                    sellQuantities[key] = sellQuantities[key] || 1;
                     const card = document.createElement('div');
                     card.classList.add('card', rarity.class);
                     card.setAttribute('data-key', key);
                     const overallProbability = character.overallProbability.toFixed(2);
-                    const count = characterCounts[rarityName][charName];
                     card.innerHTML = `
                         <h3 class="${rarity.class}">${rarityName}</h3>
                         <p>${charName} (${overallProbability}%)${count > 1 ? ` cards: ${count}x` : ''}</p>
-                        ${count > 1 ? `<button class="sell-button" data-rarity="${rarityName}" data-character="${charName}">Sell (1 for ${rarity.sellValue} Gold)</button>` : ''}
+                        ${count > 1 ? `
+                            <div class="sell-controls">
+                                <button class="quantity-button minus" data-key="${key}">-</button>
+                                <span class="quantity-display" data-key="${key}">${sellQuantities[key]}</span>
+                                <button class="quantity-button plus" data-key="${key}" ${sellQuantities[key] >= count - 1 ? 'disabled' : ''}>+</button>
+                                <button class="sell-button" data-rarity="${rarityName}" data-character="${charName}" data-key="${key}">Sell (${sellQuantities[key]} for ${sellQuantities[key] * rarity.sellValue} Gold)</button>
+                            </div>
+                        ` : ''}
                     `;
                     cardsContainer.appendChild(card);
                 }
             }
 
-            // Add event listeners to sell buttons
+            // Add event listeners to sell controls
+            const minusButtons = cardsContainer.querySelectorAll('.quantity-button.minus');
+            const plusButtons = cardsContainer.querySelectorAll('.quantity-button.plus');
             const sellButtons = cardsContainer.querySelectorAll('.sell-button');
+
+            minusButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const key = button.getAttribute('data-key');
+                    if (sellQuantities[key] > 1) {
+                        sellQuantities[key]--;
+                        const quantityDisplay = cardsContainer.querySelector(`.quantity-display[data-key="${key}"]`);
+                        const sellButton = cardsContainer.querySelector(`.sell-button[data-key="${key}"]`);
+                        const rarityName = sellButton.getAttribute('data-rarity');
+                        const rarity = rarities.find(r => r.name === rarityName);
+                        quantityDisplay.textContent = sellQuantities[key];
+                        sellButton.textContent = `Sell (${sellQuantities[key]} for ${sellQuantities[key] * rarity.sellValue} Gold)`;
+                        button.parentElement.querySelector('.quantity-button.plus').disabled = false;
+                        if (sellQuantities[key] === 1) {
+                            button.disabled = true;
+                        }
+                    }
+                });
+            });
+
+            plusButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const key = button.getAttribute('data-key');
+                    const rarityName = button.parentElement.querySelector('.sell-button').getAttribute('data-rarity');
+                    const characterName = button.parentElement.querySelector('.sell-button').getAttribute('data-character');
+                    const count = characterCounts[rarityName][characterName];
+                    if (sellQuantities[key] < count - 1) {
+                        sellQuantities[key]++;
+                        const quantityDisplay = cardsContainer.querySelector(`.quantity-display[data-key="${key}"]`);
+                        const sellButton = cardsContainer.querySelector(`.sell-button[data-key="${key}"]`);
+                        const rarity = rarities.find(r => r.name === rarityName);
+                        quantityDisplay.textContent = sellQuantities[key];
+                        sellButton.textContent = `Sell (${sellQuantities[key]} for ${sellQuantities[key] * rarity.sellValue} Gold)`;
+                        button.parentElement.querySelector('.quantity-button.minus').disabled = false;
+                        if (sellQuantities[key] >= count - 1) {
+                            button.disabled = true;
+                        }
+                    }
+                });
+            });
+
             sellButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     const rarityName = button.getAttribute('data-rarity');
                     const characterName = button.getAttribute('data-character');
+                    const key = button.getAttribute('data-key');
+                    const quantity = sellQuantities[key] || 1;
                     const rarity = rarities.find(r => r.name === rarityName);
                     if (characterCounts[rarityName][characterName] > 1) {
-                        characterCounts[rarityName][characterName]--;
-                        if (characterCounts[rarityName][characterName] === 0) {
+                        characterCounts[rarityName][characterName] -= quantity;
+                        if (characterCounts[rarityName][characterName] <= 0) {
                             delete characterCounts[rarityName][characterName];
                             if (Object.keys(characterCounts[rarityName]).length === 0) {
                                 delete characterCounts[rarityName];
                             }
                         }
-                        goldBalance += rarity.sellValue;
-                        goldEarned += rarity.sellValue; // Track for achievement
-                        sellCount++; // Track for achievement
-                        alert(`Sold ${rarityName}: ${characterName} for ${rarity.sellValue} Gold!`);
+                        const totalGold = quantity * rarity.sellValue;
+                        goldBalance += totalGold;
+                        goldEarned += totalGold;
+                        sellCount += quantity;
+                        alert(`Sold ${quantity} ${rarityName}: ${characterName} for ${totalGold} Gold!`);
                         updateGoldBalance();
-                        updateMissionProgress('sellDuplicate');
+                        updateMissionProgress('sellDuplicate', quantity);
                         renderCards();
                         renderMissions();
                         saveGameState();
@@ -1354,7 +1451,7 @@
                         if (rarityName === 'Epic') {
                             updateMissionProgress('getEpic');
                         }
-                        renderMissions(); // Update achievements display
+                        renderMissions();
                     } else {
                         alert('Not enough gold to purchase this character.');
                     }
@@ -1427,7 +1524,7 @@
                         if (ach && ach.condition() && !ach.claimed) {
                             ach.claimed = true;
                             goldBalance += ach.reward;
-                            goldEarned += ach.reward; // Track for achievement
+                            goldEarned += ach.reward;
                             alert(`Claimed ${ach.name} for ${ach.reward} Gold!`);
                             updateGoldBalance();
                             renderMissions();
@@ -1437,7 +1534,7 @@
                         const mission = dailyMissions.find(m => m.id === missionId);
                         if (mission && mission.progress >= mission.goal && !mission.claimedAt) {
                             goldBalance += mission.reward;
-                            goldEarned += mission.reward; // Track for achievement
+                            goldEarned += mission.reward;
                             mission.claimedAt = Date.now();
                             alert(`Claimed ${mission.name} for ${mission.reward} Gold! New mission in 2 hours.`);
                             updateGoldBalance();
@@ -1480,7 +1577,7 @@
 
         // Event listener for shop button
         document.getElementById('top-shop-button').addEventListener('click', () => {
-            if (!tutorialCompleted) return; // Prevent interaction during tutorial
+            if (!tutorialCompleted) return;
             const shopMenu = document.getElementById('shop-menu');
             shopMenu.classList.add('open');
             renderShopCharacters();
@@ -1495,7 +1592,7 @@
 
         // Event listener for missions button
         document.getElementById('top-missions-button').addEventListener('click', () => {
-            if (!tutorialCompleted) return; // Prevent interaction during tutorial
+            if (!tutorialCompleted) return;
             const missionsMenu = document.getElementById('missions-menu');
             missionsMenu.classList.add('open');
             renderMissions();
@@ -1509,13 +1606,13 @@
 
         // Event listener for roll button
         document.getElementById('roll-button').addEventListener('click', () => {
-            if (!tutorialCompleted) return; // Prevent interaction during tutorial
+            if (!tutorialCompleted) return;
             performSingleRoll();
         });
 
         // Event listener for multi-roll button
         document.getElementById('multi-roll').addEventListener('click', () => {
-            if (!tutorialCompleted) return; // Prevent interaction during tutorial
+            if (!tutorialCompleted) return;
             performMultiRoll();
         });
 
