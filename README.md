@@ -91,28 +91,6 @@
             white-space: pre-wrap;
             will-change: transform;
         }
-        #grey-box .name-container.multi-roll-summary {
-            font-size: 14px;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-        #grey-box .name-container.multi-roll-summary .column {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            width: 48%;
-        }
-        #grey-box .name-container.multi-roll-summary .number {
-            display: inline-block;
-            width: 30px;
-            text-align: right;
-        }
         #roll-button {
             padding: 10px 40px;
             font-size: 18px;
@@ -254,6 +232,11 @@
             font-size: 12px;
             width: 30px;
             text-align: center;
+        }
+        .gold-generation {
+            font-size: 12px;
+            color: #ff9800;
+            margin: 5px 0 0;
         }
         .filter-buttons {
             display: none;
@@ -515,12 +498,6 @@
                 min-height: 120px;
                 font-size: min(5vw, 16px);
             }
-            #grey-box .name-container.multi-roll-summary {
-                font-size: min(4vw, 12px);
-            }
-            #grey-box .name-container.multi-roll-summary .number {
-                width: 25px;
-            }
             #your-cards {
                 width: 100%;
             }
@@ -555,6 +532,9 @@
             .quantity-display {
                 font-size: min(3vw, 10px);
                 width: 20px;
+            }
+            .gold-generation {
+                font-size: min(3vw, 10px);
             }
             .filter-button {
                 padding: 1vw 2vw;
@@ -629,12 +609,6 @@
                 min-height: 120px;
                 font-size: min(4.5vw, 18px);
             }
-            #grey-box .name-container.multi-roll-summary {
-                font-size: min(3.5vw, 13px);
-            }
-            #grey-box .name-container.multi-roll-summary .number {
-                width: 25px;
-            }
             #your-cards {
                 width: 45%;
             }
@@ -670,6 +644,9 @@
             .quantity-display {
                 font-size: min(3.5vw, 11px);
                 width: 25px;
+            }
+            .gold-generation {
+                font-size: min(3.5vw, 11px);
             }
             .filter-button {
                 padding: 1vw 2vw;
@@ -777,7 +754,7 @@
     </div>
 
     <script>
-        // Define rarities with fixed probabilities (sum to 100)
+        // Define rarities with fixed probabilities
         const rarities = [
             { name: 'Common', probability: 85, class: 'rarity-common', sellValue: 50 },
             { name: 'Rare', probability: 10, class: 'rarity-rare', sellValue: 200 },
@@ -785,32 +762,32 @@
             { name: 'Legendary', probability: 0.2, class: 'rarity-legendary', sellValue: 2000 }
         ];
 
-        // Define characters by rarity with fixed probabilities and overall probabilities
+        // Define characters by rarity with gold generation rates
         const characters = {
             'Common': [
-                { name: 'Peasant', probability: 30, overallProbability: 25.50 },
-                { name: 'Squire', probability: 25, overallProbability: 21.25 },
-                { name: 'Archer', probability: 20, overallProbability: 17.00 },
-                { name: 'Footman', probability: 15, overallProbability: 12.75 },
-                { name: 'Scout', probability: 10, overallProbability: 8.50 }
+                { name: 'Peasant', probability: 30, overallProbability: 25.50, goldPer30s: 5 },
+                { name: 'Squire', probability: 25, overallProbability: 21.25, goldPer30s: 7 },
+                { name: 'Archer', probability: 20, overallProbability: 17.00, goldPer30s: 10 },
+                { name: 'Footman', probability: 15, overallProbability: 12.75, goldPer30s: 12 },
+                { name: 'Scout', probability: 10, overallProbability: 8.50, goldPer30s: 15 }
             ],
             'Rare': [
-                { name: 'Knight', probability: 30, overallProbability: 3.00 },
-                { name: 'Mage', probability: 25, overallProbability: 2.50 },
-                { name: 'Assassin', probability: 20, overallProbability: 2.00 },
-                { name: 'Healer', probability: 15, overallProbability: 1.50 },
-                { name: 'Berserker', probability: 10, overallProbability: 1.00 }
+                { name: 'Knight', probability: 30, overallProbability: 3.00, goldPer30s: 20 },
+                { name: 'Mage', probability: 25, overallProbability: 2.50, goldPer30s: 25 },
+                { name: 'Assassin', probability: 20, overallProbability: 2.00, goldPer30s: 30 },
+                { name: 'Healer', probability: 15, overallProbability: 1.50, goldPer30s: 35 },
+                { name: 'Berserker', probability: 10, overallProbability: 1.00, goldPer30s: 40 }
             ],
             'Epic': [
-                { name: 'Dragon Rider', probability: 33.33, overallProbability: 1.60 },
-                { name: 'Elemental Sorcerer', probability: 33.33, overallProbability: 1.60 },
-                { name: 'Shadow Ninja', probability: 22.22, overallProbability: 1.07 },
-                { name: 'Holy Paladin', probability: 11.12, overallProbability: 0.53 }
+                { name: 'Dragon Rider', probability: 33.33, overallProbability: 1.60, goldPer30s: 50 },
+                { name: 'Elemental Sorcerer', probability: 33.33, overallProbability: 1.60, goldPer30s: 60 },
+                { name: 'Shadow Ninja', probability: 22.22, overallProbability: 1.07, goldPer30s: 70 },
+                { name: 'Holy Paladin', probability: 11.12, overallProbability: 0.53, goldPer30s: 80 }
             ],
             'Legendary': [
-                { name: 'God Emperor', probability: 40, overallProbability: 0.08 },
-                { name: 'Phoenix Lord', probability: 30, overallProbability: 0.06 },
-                { name: 'Void Walker', probability: 30, overallProbability: 0.06 }
+                { name: 'God Emperor', probability: 40, overallProbability: 0.08, goldPer30s: 100 },
+                { name: 'Phoenix Lord', probability: 30, overallProbability: 0.06, goldPer30s: 125 },
+                { name: 'Void Walker', probability: 30, overallProbability: 0.06, goldPer30s: 150 }
             ]
         };
 
@@ -904,12 +881,17 @@
             },
             {
                 title: "Your Gold Balance",
-                text: "Your gold is shown here. You earn 10 gold every 5 minutes (up to 200 daily) and more through missions!",
+                text: "Your gold is shown here. You earn gold through missions, selling duplicates, and passive generation from your cards!",
                 highlight: "#main-gold-balance"
             },
             {
                 title: "Your Card Collection",
                 text: "Click 'Your Cards' to view your characters. You can filter by rarity and sell duplicates for gold.",
+                highlight: "#your-cards h2"
+            },
+            {
+                title: "Passive Gold Generation",
+                text: "Each character generates gold every 30 seconds, with higher rarities producing more. Check the amount under each card's name in 'Your Cards'.",
                 highlight: "#your-cards h2"
             },
             {
@@ -1060,19 +1042,41 @@
             saveGameState();
         }
 
-        // Passive gold accumulation
+        // Passive gold accumulation from timer and characters
         const dailyGoldCap = 200;
         setInterval(() => {
             checkDailyReset();
+            let totalGoldToAdd = 0;
+
+            // Timer-based gold (every 5 minutes)
             if (dailyGoldEarned < dailyGoldCap) {
-                const goldToAdd = Math.min(10, dailyGoldCap - dailyGoldEarned);
-                goldBalance += goldToAdd;
-                dailyGoldEarned += goldToAdd;
-                goldEarned += goldToAdd;
+                const timerGold = Math.min(10, dailyGoldCap - dailyGoldEarned);
+                totalGoldToAdd += timerGold;
+                dailyGoldEarned += timerGold;
+                goldEarned += timerGold;
+            }
+
+            // Character-based gold (every 30 seconds)
+            for (let rarityName in characterCounts) {
+                for (let charName in characterCounts[rarityName]) {
+                    const character = characters[rarityName].find(c => c.name === charName);
+                    const count = characterCounts[rarityName][charName];
+                    const goldFromCharacter = character.goldPer30s * count;
+                    if (dailyGoldEarned < dailyGoldCap) {
+                        const characterGold = Math.min(goldFromCharacter, dailyGoldCap - dailyGoldEarned);
+                        totalGoldToAdd += characterGold;
+                        dailyGoldEarned += characterGold;
+                        goldEarned += characterGold;
+                    }
+                }
+            }
+
+            if (totalGoldToAdd > 0) {
+                goldBalance += totalGoldToAdd;
                 updateGoldBalance();
                 renderMissions();
             }
-        }, 5 * 60 * 1000);
+        }, 30 * 1000); // Changed to 30 seconds for character gold generation
 
         // Function to get a random rarity based on fixed probabilities, with pity
         function getRandomRarity() {
@@ -1154,30 +1158,21 @@
                 const nameContainer = document.getElementById('grey-box').querySelector('.name-container');
                 nameContainer.innerHTML = 'Click Roll to Start';
                 nameContainer.style.color = 'black';
-                nameContainer.classList.remove('multi-roll-summary');
             }, 7000);
             renderMissions();
             saveGameState();
         }
 
         // Function to display multi-roll summary
-        function displayMultiRollSummary(results) {
+        function displayMultiRollSummary() {
             const nameContainer = document.getElementById('grey-box').querySelector('.name-container');
-            const leftColumn = results.slice(0, 5).map(({ rarity, character }, index) => 
-                `<span class="number">${index + 1}.</span> ${rarity.name}:${character.name}`
-            ).join('\n');
-            const rightColumn = results.slice(5).map(({ rarity, character }, index) => 
-                `<span class="number">${index + 6}.</span> ${rarity.name}:${character.name}`
-            ).join('\n');
-            nameContainer.innerHTML = `<div class="column">${leftColumn}</div><div class="column">${rightColumn}</div>`;
+            nameContainer.innerHTML = 'You rolled 10 cards!';
             nameContainer.style.color = 'black';
             nameContainer.style.animation = 'none';
             nameContainer.style.transform = 'translateY(0)';
-            nameContainer.classList.add('multi-roll-summary');
             setTimeout(() => {
                 nameContainer.innerHTML = 'Click Roll to Start';
                 nameContainer.style.color = 'black';
-                nameContainer.classList.remove('multi-roll-summary');
             }, 5000);
         }
 
@@ -1203,14 +1198,12 @@
             }
             updateGoldBalance();
             updateMissionProgress('multiRoll');
-            const results = [];
             const greyBox = document.getElementById('grey-box');
             greyBox.classList.add('flash');
             setTimeout(() => greyBox.classList.remove('flash'), 500);
             for (let i = 0; i < 10; i++) {
                 const rarity = getRandomRarity();
                 const character = getRandomCharacter(rarity.name);
-                results.push({ rarity, character });
                 await animateRoll((r, c) => {
                     addToCards(r, c);
                     if (r.name === 'Legendary') {
@@ -1225,7 +1218,7 @@
                     renderMissions();
                 }, 2000, rarity, character);
             }
-            displayMultiRollSummary(results);
+            displayMultiRollSummary();
             renderMissions();
             saveGameState();
         }
@@ -1248,8 +1241,6 @@
                     nameContainer.style.color = rarity.class === 'rarity-common' ? 'gray' :
                                               rarity.class === 'rarity-rare' ? 'blue' :
                                               rarity.class === 'rarity-epic' ? 'purple' : 'gold';
-                    nameContainer.classList.remove('multi-roll-summary');
-
                     nameContainer.style.animation = 'none';
                     void nameContainer.offsetWidth;
                     nameContainer.style.animation = `slide-up ${currentInterval}ms linear`;
@@ -1267,7 +1258,6 @@
                                                    finalRarity.class === 'rarity-epic' ? 'purple' : 'gold';
                         nameContainer.style.animation = 'none';
                         nameContainer.style.transform = 'translateY(0)';
-                        nameContainer.classList.remove('multi-roll-summary');
                         callback(finalRarity, finalCharacter);
                         resolve();
                     }
@@ -1294,6 +1284,7 @@
                     const key = `${rarityName}:${charName}`;
                     const count = characterCounts[rarityName][charName];
                     sellQuantities[key] = sellQuantities[key] || 1;
+                    const totalGoldPer30s = character.goldPer30s * count;
                     const card = document.createElement('div');
                     card.classList.add('card', rarity.class);
                     card.setAttribute('data-key', key);
@@ -1301,6 +1292,7 @@
                     card.innerHTML = `
                         <h3 class="${rarity.class}">${rarityName}</h3>
                         <p>${charName} (${overallProbability}%)${count > 1 ? ` cards: ${count}x` : ''}</p>
+                        <p class="gold-generation">Generates: ${totalGoldPer30s} Gold / 30s</p>
                         ${count > 1 ? `
                             <div class="sell-controls">
                                 <button class="quantity-button minus" data-key="${key}">-</button>
