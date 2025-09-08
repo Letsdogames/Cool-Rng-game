@@ -190,6 +190,7 @@
         .rarity-rare { color: blue; border-color: blue; }
         .rarity-epic { color: purple; border-color: purple; }
         .rarity-legendary { color: gold; border-color: gold; font-weight: bold; }
+        .rarity-exclusive { color: cyan; border-color: cyan; font-weight: bold; }
         .sell-controls {
             position: absolute;
             top: 10px;
@@ -264,6 +265,8 @@
         .filter-button.epic:hover { background-color: #660099; }
         .filter-button.legendary { background-color: gold; color: black; }
         .filter-button.legendary:hover { background-color: #ffcc00; }
+        .filter-button.exclusive { background-color: cyan; color: black; }
+        .filter-button.exclusive:hover { background-color: #00b7eb; }
         .filter-button.all { background-color: #666; }
         .filter-button.all:hover { background-color: #555; }
         .filter-button.active {
@@ -315,6 +318,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .shop-header h2, .missions-header h2 {
             margin: 0;
@@ -325,6 +330,29 @@
             font-size: 18px;
             font-weight: bold;
             color: #ff9800;
+        }
+        .shop-toggle {
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            background-color: #ff9800;
+            transition: background-color 0.3s ease;
+        }
+        .shop-toggle:hover {
+            background-color: #e68a00;
+        }
+        .shop-toggle.active {
+            filter: brightness(1.2);
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .shop-toggle.exclusive {
+            background-color: #00b7eb;
+        }
+        .shop-toggle.exclusive:hover {
+            background-color: #0099cc;
         }
         .back-button {
             padding: 8px 16px;
@@ -553,7 +581,7 @@
             .gold-balance {
                 font-size: min(5vw, 16px);
             }
-            .back-button {
+            .shop-toggle, .back-button {
                 padding: 2vw 4vw;
                 font-size: min(4vw, 14px);
             }
@@ -665,7 +693,7 @@
             .gold-balance {
                 font-size: min(4.5vw, 17px);
             }
-            .back-button {
+            .shop-toggle, .back-button {
                 padding: 1.5vw 3vw;
                 font-size: min(4vw, 15px);
             }
@@ -720,6 +748,7 @@
                 <button class="filter-button rare" data-rarity="Rare">Rare</button>
                 <button class="filter-button epic" data-rarity="Epic">Epic</button>
                 <button class="filter-button legendary" data-rarity="Legendary">Legendary</button>
+                <button class="filter-button exclusive" data-rarity="Exclusive">Exclusive</button>
                 <button class="filter-button all active" data-rarity="all">Show All</button>
             </div>
         </div>
@@ -727,11 +756,15 @@
     <div class="shop-menu" id="shop-menu">
         <div class="shop-content">
             <div class="shop-header">
-                <h2>Shop</h2>
+                <div>
+                    <button class="shop-toggle standard active" id="shop-standard-button">Standard</button>
+                    <button class="shop-toggle exclusive" id="shop-exclusive-button">Exclusive</button>
+                </div>
                 <div class="gold-balance" id="gold-balance">Gold: 1000</div>
                 <button class="back-button" id="shop-back-button">Back</button>
             </div>
             <div id="shop-characters"></div>
+            <div id="exclusive-shop-characters" style="display: none;"></div>
         </div>
     </div>
     <div class="missions-menu" id="missions-menu">
@@ -754,54 +787,68 @@
     </div>
 
     <script>
-        // Define rarities with fixed probabilities
+// Define rarities with fixed probabilities
         const rarities = [
             { name: 'Common', probability: 85, class: 'rarity-common', sellValue: 50 },
             { name: 'Rare', probability: 10, class: 'rarity-rare', sellValue: 200 },
             { name: 'Epic', probability: 4.8, class: 'rarity-epic', sellValue: 500 },
-            { name: 'Legendary', probability: 0.2, class: 'rarity-legendary', sellValue: 2000 }
+            { name: 'Legendary', probability: 0.2, class: 'rarity-legendary', sellValue: 2000 },
+            { name: 'Exclusive', probability: 0, class: 'rarity-exclusive', sellValue: 10000 }
         ];
 
-        // Define characters by rarity with gold generation rates
+        // Define characters by rarity for rolling
         const characters = {
             'Common': [
-                { name: 'Peasant', probability: 30, overallProbability: 25.50, goldPer30s: 5 },
-                { name: 'Squire', probability: 25, overallProbability: 21.25, goldPer30s: 7 },
-                { name: 'Archer', probability: 20, overallProbability: 17.00, goldPer30s: 10 },
-                { name: 'Footman', probability: 15, overallProbability: 12.75, goldPer30s: 12 },
-                { name: 'Scout', probability: 10, overallProbability: 8.50, goldPer30s: 15 }
+                { name: 'Peasant', probability: 30, overallProbability: 25.50, goldPer30s: 3 },
+                { name: 'Squire', probability: 25, overallProbability: 21.25, goldPer30s: 3 },
+                { name: 'Archer', probability: 20, overallProbability: 17.00, goldPer30s: 4 },
+                { name: 'Footman', probability: 15, overallProbability: 12.75, goldPer30s: 4 },
+                { name: 'Scout', probability: 10, overallProbability: 8.50, goldPer30s: 5 }
             ],
             'Rare': [
-                { name: 'Knight', probability: 30, overallProbability: 3.00, goldPer30s: 20 },
-                { name: 'Mage', probability: 25, overallProbability: 2.50, goldPer30s: 25 },
-                { name: 'Assassin', probability: 20, overallProbability: 2.00, goldPer30s: 30 },
-                { name: 'Healer', probability: 15, overallProbability: 1.50, goldPer30s: 35 },
-                { name: 'Berserker', probability: 10, overallProbability: 1.00, goldPer30s: 40 }
+                { name: 'Knight', probability: 30, overallProbability: 3.00, goldPer30s: 8 },
+                { name: 'Mage', probability: 25, overallProbability: 2.50, goldPer30s: 9 },
+                { name: 'Assassin', probability: 20, overallProbability: 2.00, goldPer30s: 10 },
+                { name: 'Healer', probability: 15, overallProbability: 1.50, goldPer30s: 11 },
+                { name: 'Berserker', probability: 10, overallProbability: 1.00, goldPer30s: 12 }
             ],
             'Epic': [
-                { name: 'Dragon Rider', probability: 33.33, overallProbability: 1.60, goldPer30s: 50 },
-                { name: 'Elemental Sorcerer', probability: 33.33, overallProbability: 1.60, goldPer30s: 60 },
-                { name: 'Shadow Ninja', probability: 22.22, overallProbability: 1.07, goldPer30s: 70 },
-                { name: 'Holy Paladin', probability: 11.12, overallProbability: 0.53, goldPer30s: 80 }
+                { name: 'Dragon Rider', probability: 33.33, overallProbability: 1.60, goldPer30s: 20 },
+                { name: 'Elemental Sorcerer', probability: 33.33, overallProbability: 1.60, goldPer30s: 22 },
+                { name: 'Shadow Ninja', probability: 22.22, overallProbability: 1.07, goldPer30s: 25 },
+                { name: 'Holy Paladin', probability: 11.12, overallProbability: 0.53, goldPer30s: 30 }
             ],
             'Legendary': [
-                { name: 'God Emperor', probability: 40, overallProbability: 0.08, goldPer30s: 100 },
-                { name: 'Phoenix Lord', probability: 30, overallProbability: 0.06, goldPer30s: 125 },
-                { name: 'Void Walker', probability: 30, overallProbability: 0.06, goldPer30s: 150 }
+                { name: 'God Emperor', probability: 40, overallProbability: 0.08, goldPer30s: 40 },
+                { name: 'Phoenix Lord', probability: 30, overallProbability: 0.06, goldPer30s: 50 },
+                { name: 'Void Walker', probability: 30, overallProbability: 0.06, goldPer30s: 60 }
             ]
         };
 
-        // Assign unique gold costs to each character based on rarity
+        // Define exclusive characters (not available in rolls)
+        const exclusiveCharacters = [
+            { name: 'Echoes Beyond the Rift', goldPer30s: 100, goldCost: 500000 },
+            { name: 'Neon Ashes', goldPer30s: 105, goldCost: 525000 },
+            { name: 'The Fractured Signal', goldPer30s: 110, goldCost: 550000 },
+            { name: 'Orbitfall', goldPer30s: 115, goldCost: 575000 },
+            { name: 'The Hollow Transmission', goldPer30s: 120, goldCost: 600000 },
+            { name: 'Dusk Over Titan', goldPer30s: 125, goldCost: 650000 },
+            { name: 'Synthetic Dawn', goldPer30s: 130, goldCost: 700000 },
+            { name: 'The Forgotten Outpost', goldPer30s: 140, goldCost: 750000 },
+            { name: 'Starlight Requiem', goldPer30s: 150, goldCost: 800000 }
+        ];
+
+        // Assign gold costs to standard characters
         for (let rarityName in characters) {
             characters[rarityName].forEach(character => {
                 if (rarityName === 'Common') {
-                    character.goldCost = Math.round(1000 / character.overallProbability) * 5;
+                    character.goldCost = Math.round(500 / character.overallProbability) * 3;
                 } else if (rarityName === 'Rare') {
-                    character.goldCost = Math.round(3000 / character.overallProbability) * 10;
+                    character.goldCost = Math.round(1500 / character.overallProbability) * 5;
                 } else if (rarityName === 'Epic') {
-                    character.goldCost = Math.round(5000 / character.overallProbability) * 20;
+                    character.goldCost = Math.round(2500 / character.overallProbability) * 10;
                 } else if (rarityName === 'Legendary') {
-                    character.goldCost = Math.round(10000 / character.overallProbability) * 50;
+                    character.goldCost = Math.round(5000 / character.overallProbability) * 20;
                 }
             });
         }
@@ -817,18 +864,23 @@
         let goldEarned = parseInt(localStorage.getItem('goldEarned')) || 0;
         const pityThreshold = 100;
         let currentFilter = localStorage.getItem('currentFilter') || 'all';
-        let dailyGoldEarned = parseInt(localStorage.getItem('dailyGoldEarned')) || 0;
-        let lastGoldReset = parseInt(localStorage.getItem('lastGoldReset')) || Date.now();
+        let lastMissionReset = parseInt(localStorage.getItem('lastMissionReset')) || Date.now();
         let dailyMissions = [];
         try {
             dailyMissions = JSON.parse(localStorage.getItem('dailyMissions')) || [];
+            if (!Array.isArray(dailyMissions)) {
+                console.warn('Invalid dailyMissions format in localStorage, resetting to empty array.');
+                dailyMissions = [];
+                generateDailyMissions();
+            }
         } catch (e) {
             console.error('Error loading dailyMissions from localStorage:', e);
             dailyMissions = [];
+            generateDailyMissions();
             localStorage.removeItem('dailyMissions');
         }
-        let lastMissionReset = parseInt(localStorage.getItem('lastMissionReset')) || Date.now();
         let tutorialCompleted = localStorage.getItem('tutorialCompleted') === 'true';
+        let currentShopTab = localStorage.getItem('currentShopTab') || 'standard';
 
         // Achievements
         const achievements = [
@@ -841,7 +893,8 @@
             { id: 'getLegendary', name: 'Obtain a Legendary', condition: () => Object.keys(characterCounts['Legendary'] || {}).length >= 1, reward: 3000, claimed: false },
             { id: 'multiRoll10', name: 'Perform 10 Multi-Rolls', condition: () => multiRollCount >= 10, reward: 1500, claimed: false },
             { id: 'sell10', name: 'Sell 10 Cards', condition: () => sellCount >= 10, reward: 1000, claimed: false },
-            { id: 'gold5000', name: 'Earn 5000 Gold', condition: () => goldEarned >= 5000, reward: 2000, claimed: false }
+            { id: 'gold5000', name: 'Earn 5000 Gold', condition: () => goldEarned >= 5000, reward: 2000, claimed: false },
+            { id: 'getExclusive', name: 'Obtain an Exclusive Character', condition: () => Object.keys(characterCounts['Exclusive'] || {}).length >= 1, reward: 5000, claimed: false }
         ];
 
         // Load and merge saved achievements
@@ -864,7 +917,8 @@
             { id: 'getRare', name: 'Obtain 1 Rare Character', progress: 0, goal: 1, reward: 300, type: 'getRare' },
             { id: 'multiRoll2', name: 'Perform 2 Multi-Rolls', progress: 0, goal: 2, reward: 200, type: 'multiRoll' },
             { id: 'sellDuplicate', name: 'Sell 1 Duplicate Card', progress: 0, goal: 1, reward: 100, type: 'sellDuplicate' },
-            { id: 'getEpic', name: 'Obtain 1 Epic Character', progress: 0, goal: 1, reward: 400, type: 'getEpic' }
+            { id: 'getEpic', name: 'Obtain 1 Epic Character', progress: 0, goal: 1, reward: 400, type: 'getEpic' },
+            { id: 'getExclusive', name: 'Obtain 1 Exclusive Character', progress: 0, goal: 1, reward: 1000, type: 'getExclusive' }
         ];
 
         // Tutorial Steps
@@ -896,7 +950,7 @@
             },
             {
                 title: "Shop",
-                text: "Click 'Shop' to buy specific characters with gold. Rarer characters cost more!",
+                text: "Click 'Shop' to buy specific characters with gold. The Exclusive tab offers unique, high-cost characters not available in rolls!",
                 highlight: "#top-shop-button"
             },
             {
@@ -970,22 +1024,19 @@
             localStorage.setItem('sellCount', sellCount);
             localStorage.setItem('goldEarned', goldEarned);
             localStorage.setItem('currentFilter', currentFilter);
-            localStorage.setItem('dailyGoldEarned', dailyGoldEarned);
-            localStorage.setItem('lastGoldReset', lastGoldReset);
+            localStorage.setItem('lastMissionReset', lastMissionReset);
             localStorage.setItem('achievements', JSON.stringify(achievements.reduce((acc, ach) => ({ ...acc, [ach.id]: { claimed: ach.claimed } }), {})));
             localStorage.setItem('dailyMissions', JSON.stringify(dailyMissions));
-            localStorage.setItem('lastMissionReset', lastMissionReset);
+            localStorage.setItem('currentShopTab', currentShopTab);
         }
 
-        // Function to check and reset daily missions and gold cap
+        // Function to check and reset daily missions
         function checkDailyReset() {
             const now = Date.now();
             const today = new Date(now).setHours(0, 0, 0, 0);
             const lastReset = new Date(lastMissionReset).setHours(0, 0, 0, 0);
             if (today > lastReset) {
                 generateDailyMissions();
-                dailyGoldEarned = 0;
-                lastGoldReset = now;
                 saveGameState();
             }
         }
@@ -995,35 +1046,60 @@
             const missionIndex = dailyMissions.findIndex(m => m.id === missionId);
             if (missionIndex === -1) return;
 
-            const availableTemplates = missionTemplates.filter(mt => !dailyMissions.some(dm => dm.id === mt.id));
-            if (availableTemplates.length === 0) {
-                dailyMissions.splice(missionIndex, 1);
-            } else {
+            // Remove the claimed mission
+            dailyMissions.splice(missionIndex, 1);
+
+            // Get available templates, excluding current mission IDs
+            let availableTemplates = missionTemplates.filter(mt => !dailyMissions.some(dm => dm.id === mt.id));
+            
+            // Add new missions until we have 3
+            while (dailyMissions.length < 3 && availableTemplates.length > 0) {
                 const newMissionIndex = Math.floor(Math.random() * availableTemplates.length);
                 const newMission = { ...availableTemplates[newMissionIndex], progress: 0, claimedAt: null };
-                dailyMissions[missionIndex] = newMission;
-            }
-
-            while (dailyMissions.length < 3 && availableTemplates.length > 0) {
-                const remainingTemplates = missionTemplates.filter(mt => !dailyMissions.some(dm => dm.id === mt.id));
-                if (remainingTemplates.length === 0) break;
-                const newMissionIndex = Math.floor(Math.random() * remainingTemplates.length);
-                const newMission = { ...remainingTemplates[newMissionIndex], progress: 0, claimedAt: null };
                 dailyMissions.push(newMission);
+                availableTemplates.splice(newMissionIndex, 1); // Remove used template to avoid duplicates
             }
 
             saveGameState();
             renderMissions();
         }
 
+        // Function to format numbers with commas
+        function formatNumberWithCommas(number) {
+            return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
         // Function to update gold balance display
         function updateGoldBalance() {
-            document.getElementById('main-gold-balance').textContent = `Gold: ${goldBalance}`;
-            document.getElementById('gold-balance').textContent = `Gold: ${goldBalance}`;
-            document.getElementById('missions-gold-balance').textContent = `Gold: ${goldBalance}`;
-            document.getElementById('roll-button').disabled = goldBalance < 100;
-            document.getElementById('multi-roll').disabled = goldBalance < 900;
-            if (document.getElementById('shop-menu').classList.contains('open')) {
+            // Prevent negative gold
+            if (goldBalance < 0) {
+                console.warn('Gold balance went negative, resetting to 0.');
+                goldBalance = 0;
+            }
+
+            const mainGoldBalance = document.getElementById('main-gold-balance');
+            const shopGoldBalance = document.getElementById('gold-balance');
+            const missionsGoldBalance = document.getElementById('missions-gold-balance');
+            const rollButton = document.getElementById('roll-button');
+            const multiRollButton = document.getElementById('multi-roll');
+
+            if (mainGoldBalance) {
+                mainGoldBalance.textContent = `Gold: ${formatNumberWithCommas(goldBalance)}`;
+            }
+            if (shopGoldBalance) {
+                shopGoldBalance.textContent = `Gold: ${formatNumberWithCommas(goldBalance)}`;
+            }
+            if (missionsGoldBalance) {
+                missionsGoldBalance.textContent = `Gold: ${formatNumberWithCommas(goldBalance)}`;
+            }
+            if (rollButton) {
+                rollButton.disabled = goldBalance < 100;
+            }
+            if (multiRollButton) {
+                multiRollButton.disabled = goldBalance < 900;
+            }
+
+            if (document.getElementById('shop-menu')?.classList.contains('open')) {
                 renderShopCharacters();
             }
             saveGameState();
@@ -1043,31 +1119,23 @@
         }
 
         // Passive gold accumulation from timer and characters
-        const dailyGoldCap = 200;
         setInterval(() => {
             checkDailyReset();
             let totalGoldToAdd = 0;
 
-            // Timer-based gold (every 5 minutes)
-            if (dailyGoldEarned < dailyGoldCap) {
-                const timerGold = Math.min(10, dailyGoldCap - dailyGoldEarned);
-                totalGoldToAdd += timerGold;
-                dailyGoldEarned += timerGold;
-                goldEarned += timerGold;
-            }
+            // Timer-based gold (every 30 seconds)
+            const timerGold = 2;
+            totalGoldToAdd += timerGold;
+            goldEarned += timerGold;
 
             // Character-based gold (every 30 seconds)
             for (let rarityName in characterCounts) {
                 for (let charName in characterCounts[rarityName]) {
-                    const character = characters[rarityName].find(c => c.name === charName);
+                    const character = (rarityName === 'Exclusive' ? exclusiveCharacters : characters[rarityName]).find(c => c.name === charName);
                     const count = characterCounts[rarityName][charName];
                     const goldFromCharacter = character.goldPer30s * count;
-                    if (dailyGoldEarned < dailyGoldCap) {
-                        const characterGold = Math.min(goldFromCharacter, dailyGoldCap - dailyGoldEarned);
-                        totalGoldToAdd += characterGold;
-                        dailyGoldEarned += characterGold;
-                        goldEarned += characterGold;
-                    }
+                    totalGoldToAdd += goldFromCharacter;
+                    goldEarned += goldFromCharacter;
                 }
             }
 
@@ -1076,7 +1144,7 @@
                 updateGoldBalance();
                 renderMissions();
             }
-        }, 30 * 1000); // Changed to 30 seconds for character gold generation
+        }, 30 * 1000);
 
         // Function to get a random rarity based on fixed probabilities, with pity
         function getRandomRarity() {
@@ -1088,12 +1156,13 @@
             let rand = Math.random() * 100;
             let cumulative = 0;
             for (let rarity of rarities) {
+                if (rarity.name === 'Exclusive') continue;
                 cumulative += rarity.probability;
                 if (rand < cumulative) {
                     return rarity;
                 }
             }
-            return rarities[rarities.length - 1];
+            return rarities[rarities.length - 2];
         }
 
         // Function to get a random character for a given rarity
@@ -1189,12 +1258,12 @@
             if (Math.random() < 0.05) {
                 goldBalance += 2000;
                 goldEarned += 2000;
-                alert('Jackpot! Earned 2000 extra gold!');
+                alert('Jackpot! Earned 2,000 extra gold!');
             }
             if (multiRollCount % 5 === 0) {
                 goldBalance += 1000;
                 goldEarned += 1000;
-                alert('5th Multi-Roll Bonus: Earned 1000 extra gold!');
+                alert('5th Multi-Roll Bonus: Earned 1,000 extra gold!');
             }
             updateGoldBalance();
             updateMissionProgress('multiRoll');
@@ -1240,7 +1309,8 @@
                     nameContainer.innerHTML = `${rarity.name}: ${character.name}`;
                     nameContainer.style.color = rarity.class === 'rarity-common' ? 'gray' :
                                               rarity.class === 'rarity-rare' ? 'blue' :
-                                              rarity.class === 'rarity-epic' ? 'purple' : 'gold';
+                                              rarity.class === 'rarity-epic' ? 'purple' :
+                                              rarity.class === 'rarity-legendary' ? 'gold' : 'cyan';
                     nameContainer.style.animation = 'none';
                     void nameContainer.offsetWidth;
                     nameContainer.style.animation = `slide-up ${currentInterval}ms linear`;
@@ -1255,7 +1325,8 @@
                         nameContainer.innerHTML = `You got! ${finalRarity.name}: ${finalCharacter.name}`;
                         nameContainer.style.color = finalRarity.class === 'rarity-common' ? 'gray' :
                                                    finalRarity.class === 'rarity-rare' ? 'blue' :
-                                                   finalRarity.class === 'rarity-epic' ? 'purple' : 'gold';
+                                                   finalRarity.class === 'rarity-epic' ? 'purple' :
+                                                   finalRarity.class === 'rarity-legendary' ? 'gold' : 'cyan';
                         nameContainer.style.animation = 'none';
                         nameContainer.style.transform = 'translateY(0)';
                         callback(finalRarity, finalCharacter);
@@ -1280,25 +1351,25 @@
                 }
                 const rarity = rarities.find(r => r.name === rarityName);
                 for (let charName in characterCounts[rarityName]) {
-                    const character = characters[rarityName].find(c => c.name === charName);
-                    const key = `${rarityName}:${charName}`;
+                    const character = (rarityName === 'Exclusive' ? exclusiveCharacters : characters[rarityName]).find(c => c.name === charName);
                     const count = characterCounts[rarityName][charName];
+                    const key = `${rarityName}:${charName}`;
                     sellQuantities[key] = sellQuantities[key] || 1;
                     const totalGoldPer30s = character.goldPer30s * count;
+                    const probabilityText = rarityName !== 'Exclusive' ? `(${character.overallProbability.toFixed(2)}%)` : '(Exclusive)';
                     const card = document.createElement('div');
                     card.classList.add('card', rarity.class);
                     card.setAttribute('data-key', key);
-                    const overallProbability = character.overallProbability.toFixed(2);
                     card.innerHTML = `
                         <h3 class="${rarity.class}">${rarityName}</h3>
-                        <p>${charName} (${overallProbability}%)${count > 1 ? ` cards: ${count}x` : ''}</p>
-                        <p class="gold-generation">Generates: ${totalGoldPer30s} Gold / 30s</p>
+                        <p>${charName} ${probabilityText}${count > 1 ? ` cards: ${count}x` : ''}</p>
+                        <p class="gold-generation">Generates: ${formatNumberWithCommas(totalGoldPer30s)} Gold / 30s</p>
                         ${count > 1 ? `
                             <div class="sell-controls">
                                 <button class="quantity-button minus" data-key="${key}">-</button>
                                 <span class="quantity-display" data-key="${key}">${sellQuantities[key]}</span>
                                 <button class="quantity-button plus" data-key="${key}" ${sellQuantities[key] >= count - 1 ? 'disabled' : ''}>+</button>
-                                <button class="sell-button" data-rarity="${rarityName}" data-character="${charName}" data-key="${key}">Sell (${sellQuantities[key]} for ${sellQuantities[key] * rarity.sellValue} Gold)</button>
+                                <button class="sell-button" data-rarity="${rarityName}" data-character="${charName}" data-key="${key}">Sell (${sellQuantities[key]} for ${formatNumberWithCommas(sellQuantities[key] * rarity.sellValue)} Gold)</button>
                             </div>
                         ` : ''}
                     `;
@@ -1321,7 +1392,7 @@
                         const rarityName = sellButton.getAttribute('data-rarity');
                         const rarity = rarities.find(r => r.name === rarityName);
                         quantityDisplay.textContent = sellQuantities[key];
-                        sellButton.textContent = `Sell (${sellQuantities[key]} for ${sellQuantities[key] * rarity.sellValue} Gold)`;
+                        sellButton.textContent = `Sell (${sellQuantities[key]} for ${formatNumberWithCommas(sellQuantities[key] * rarity.sellValue)} Gold)`;
                         button.parentElement.querySelector('.quantity-button.plus').disabled = false;
                         if (sellQuantities[key] === 1) {
                             button.disabled = true;
@@ -1342,7 +1413,7 @@
                         const sellButton = cardsContainer.querySelector(`.sell-button[data-key="${key}"]`);
                         const rarity = rarities.find(r => r.name === rarityName);
                         quantityDisplay.textContent = sellQuantities[key];
-                        sellButton.textContent = `Sell (${sellQuantities[key]} for ${sellQuantities[key] * rarity.sellValue} Gold)`;
+                        sellButton.textContent = `Sell (${sellQuantities[key]} for ${formatNumberWithCommas(sellQuantities[key] * rarity.sellValue)} Gold)`;
                         button.parentElement.querySelector('.quantity-button.minus').disabled = false;
                         if (sellQuantities[key] >= count - 1) {
                             button.disabled = true;
@@ -1370,7 +1441,7 @@
                         goldBalance += totalGold;
                         goldEarned += totalGold;
                         sellCount += quantity;
-                        alert(`Sold ${quantity} ${rarityName}: ${characterName} for ${totalGold} Gold!`);
+                        alert(`Sold ${quantity} ${rarityName}: ${characterName} for ${formatNumberWithCommas(totalGold)} Gold!`);
                         updateGoldBalance();
                         updateMissionProgress('sellDuplicate', quantity);
                         renderCards();
@@ -1399,32 +1470,63 @@
                 unviewedCount++;
                 updateNotificationDot();
             }
+
+            if (rarity.name === 'Exclusive') {
+                updateMissionProgress('getExclusive');
+                if (Object.keys(characterCounts['Exclusive'] || {}).length >= 1) {
+                    updateMissionProgress('getExclusive', 1);
+                }
+            }
         }
 
         // Function to render shop characters
         function renderShopCharacters() {
             const shopCharacters = document.getElementById('shop-characters');
-            shopCharacters.innerHTML = '';
+            const exclusiveShopCharacters = document.getElementById('exclusive-shop-characters');
+            shopCharacters.style.display = currentShopTab === 'standard' ? 'block' : 'none';
+            exclusiveShopCharacters.style.display = currentShopTab === 'exclusive' ? 'block' : 'none';
 
-            for (let rarity of rarities) {
-                const charactersList = characters[rarity.name];
-                for (let character of charactersList) {
+            // Render standard shop
+            if (currentShopTab === 'standard') {
+                shopCharacters.innerHTML = '';
+                for (let rarity of rarities.filter(r => r.name !== 'Exclusive')) {
+                    const charactersList = characters[rarity.name];
+                    for (let character of charactersList) {
+                        const characterItem = document.createElement('div');
+                        characterItem.classList.add('character-item', rarity.class);
+                        const overallProbability = character.overallProbability.toFixed(2);
+                        characterItem.innerHTML = `
+                            <div class="character-info">
+                                <h3 class="${rarity.class}">${rarity.name}: ${character.name}</h3>
+                                <p>Chance to get: ${overallProbability}% | Cost: ${formatNumberWithCommas(character.goldCost)} Gold | Generates: ${formatNumberWithCommas(character.goldPer30s)} Gold / 30s</p>
+                            </div>
+                            <button class="buy-button" data-rarity="${rarity.name}" data-character="${character.name}" data-cost="${character.goldCost}" ${goldBalance < character.goldCost ? 'disabled' : ''}>Buy</button>
+                        `;
+                        shopCharacters.appendChild(characterItem);
+                    }
+                }
+            }
+
+            // Render exclusive shop
+            if (currentShopTab === 'exclusive') {
+                exclusiveShopCharacters.innerHTML = '';
+                const exclusiveRarity = rarities.find(r => r.name === 'Exclusive');
+                for (let character of exclusiveCharacters) {
                     const characterItem = document.createElement('div');
-                    characterItem.classList.add('character-item', rarity.class);
-                    const overallProbability = character.overallProbability.toFixed(2);
+                    characterItem.classList.add('character-item', exclusiveRarity.class);
                     characterItem.innerHTML = `
                         <div class="character-info">
-                            <h3 class="${rarity.class}">${rarity.name}: ${character.name}</h3>
-                            <p>Chance to get: ${overallProbability}% | Cost: ${character.goldCost} Gold</p>
+                            <h3 class="${exclusiveRarity.class}">Exclusive: ${character.name}</h3>
+                            <p>Cost: ${formatNumberWithCommas(character.goldCost)} Gold | Generates: ${formatNumberWithCommas(character.goldPer30s)} Gold / 30s</p>
                         </div>
-                        <button class="buy-button" data-rarity="${rarity.name}" data-character="${character.name}" data-cost="${character.goldCost}" ${goldBalance < character.goldCost ? 'disabled' : ''}>Buy</button>
+                        <button class="buy-button" data-rarity="Exclusive" data-character="${character.name}" data-cost="${character.goldCost}" ${goldBalance < character.goldCost ? 'disabled' : ''}>Buy</button>
                     `;
-                    shopCharacters.appendChild(characterItem);
+                    exclusiveShopCharacters.appendChild(characterItem);
                 }
             }
 
             // Add event listeners to buy buttons
-            const buyButtons = shopCharacters.querySelectorAll('.buy-button');
+            const buyButtons = document.querySelectorAll('.buy-button');
             buyButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     const cost = parseInt(button.getAttribute('data-cost'));
@@ -1434,14 +1536,17 @@
                         goldBalance -= cost;
                         updateGoldBalance();
                         const rarity = rarities.find(r => r.name === rarityName);
-                        const character = characters[rarityName].find(c => c.name === characterName);
+                        const character = (rarityName === 'Exclusive' ? exclusiveCharacters : characters[rarityName]).find(c => c.name === characterName);
                         addToCards(rarity, character);
-                        alert(`Purchased ${rarityName}: ${characterName} for ${cost} Gold!`);
+                        alert(`Purchased ${rarityName}: ${characterName} for ${formatNumberWithCommas(cost)} Gold!`);
                         if (rarityName === 'Rare') {
                             updateMissionProgress('getRare');
                         }
                         if (rarityName === 'Epic') {
                             updateMissionProgress('getEpic');
+                        }
+                        if (rarityName === 'Exclusive') {
+                            updateMissionProgress('getExclusive');
                         }
                         renderMissions();
                     } else {
@@ -1472,7 +1577,7 @@
                 }
                 achievementItem.innerHTML = `
                     <h3>${ach.name}</h3>
-                    <p>Reward: ${ach.reward} Gold ${ach.claimed ? '(Claimed)' : isComplete ? '' : '(Incomplete)'}</p>
+                    <p>Reward: ${formatNumberWithCommas(ach.reward)} Gold ${ach.claimed ? '(Claimed)' : isComplete ? '' : '(Incomplete)'}</p>
                     ${isComplete && !ach.claimed ? `<button class="claim-button" data-achievement-id="${ach.id}">Claim</button>` : ''}
                 `;
                 achievementsContainer.appendChild(achievementItem);
@@ -1499,7 +1604,7 @@
                 }
                 missionItem.innerHTML = `
                     <h3>${mission.name}</h3>
-                    <p>Progress: ${mission.progress}/${mission.goal} | Reward: ${mission.reward} Gold ${statusText}</p>
+                    <p>Progress: ${mission.progress}/${mission.goal} | Reward: ${formatNumberWithCommas(mission.reward)} Gold ${statusText}</p>
                     ${mission.progress >= mission.goal && !mission.claimedAt ? `<button class="claim-button" data-mission-id="${mission.id}">Claim</button>` : ''}
                 `;
                 missionsContainer.appendChild(missionItem);
@@ -1517,7 +1622,7 @@
                             ach.claimed = true;
                             goldBalance += ach.reward;
                             goldEarned += ach.reward;
-                            alert(`Claimed ${ach.name} for ${ach.reward} Gold!`);
+                            alert(`Claimed ${ach.name} for ${formatNumberWithCommas(ach.reward)} Gold!`);
                             updateGoldBalance();
                             renderMissions();
                             saveGameState();
@@ -1528,7 +1633,7 @@
                             goldBalance += mission.reward;
                             goldEarned += mission.reward;
                             mission.claimedAt = Date.now();
-                            alert(`Claimed ${mission.name} for ${mission.reward} Gold! New mission in 2 hours.`);
+                            alert(`Claimed ${mission.name} for ${formatNumberWithCommas(mission.reward)} Gold! New mission in 2 hours.`);
                             updateGoldBalance();
                             renderMissions();
                             saveGameState();
@@ -1574,6 +1679,8 @@
             shopMenu.classList.add('open');
             renderShopCharacters();
             updateMissionProgress('openShop');
+            document.getElementById('shop-standard-button').classList.toggle('active', currentShopTab === 'standard');
+            document.getElementById('shop-exclusive-button').classList.toggle('active', currentShopTab === 'exclusive');
         });
 
         // Event listener for shop back button
@@ -1582,18 +1689,21 @@
             shopMenu.classList.remove('open');
         });
 
-        // Event listener for missions button
-        document.getElementById('top-missions-button').addEventListener('click', () => {
-            if (!tutorialCompleted) return;
-            const missionsMenu = document.getElementById('missions-menu');
-            missionsMenu.classList.add('open');
-            renderMissions();
+        // Event listeners for shop toggle buttons
+        document.getElementById('shop-standard-button').addEventListener('click', () => {
+            currentShopTab = 'standard';
+            document.getElementById('shop-standard-button').classList.add('active');
+            document.getElementById('shop-exclusive-button').classList.remove('active');
+            renderShopCharacters();
+            saveGameState();
         });
 
-        // Event listener for missions back button
-        document.getElementById('missions-back-button').addEventListener('click', () => {
-            const missionsMenu = document.getElementById('missions-menu');
-            missionsMenu.classList.remove('open');
+        document.getElementById('shop-exclusive-button').addEventListener('click', () => {
+            currentShopTab = 'exclusive';
+            document.getElementById('shop-standard-button').classList.remove('active');
+            document.getElementById('shop-exclusive-button').classList.add('active');
+            renderShopCharacters();
+            saveGameState();
         });
 
         // Event listener for roll button
